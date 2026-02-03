@@ -2,3 +2,17 @@
 __pycache__
 *.egg-info
 venv/
+
+fish_sorter.local.toml
+
+
+fish_sorter.local.toml
+
+
+arduino/build_fish_valves/
+
+logs/
+
+fish_sorter/GUI/fish_picker.py.bak
+
+fish_sorter/configs/micromanager/flash4.cfg

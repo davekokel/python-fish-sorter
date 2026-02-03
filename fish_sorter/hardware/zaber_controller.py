@@ -1,138 +1,134 @@
 import json
 import logging
-from typing import Optional, Tuple
-from zaber_motion import Library, Units
-from zaber_motion.binary import Connection, Device, CommandCode
+import tomllib
+from pathlib import Path
+
+def _zaber_home_on_startup() -> bool:
+    try:
+        repo = Path(__file__).resolve().parents[2]
+        cfg = repo / "fish_sorter.local.toml"
+        if not cfg.exists():
+            return False
+        data = tomllib.loads(cfg.read_text(encoding="utf-8"))
+        z = data.get("zaber", {}) if isinstance(data, dict) else {}
+        return bool(z.get("home_on_startup", False))
+    except Exception:
+        return False
+
+from typing import Optional
+from zaber_motion import Units
+from zaber_motion.ascii import Connection
 from zaber_motion.exceptions.connection_failed_exception import ConnectionFailedException
 from zaber_motion.exceptions.movement_failed_exception import MovementFailedException
 
+
 class ZaberController():
-    """Communicate with Zaber devices over serial to move the stages
-        Note that this class is using the zaber_motion.binary library instead of 
-        zaber_motion.ascii because of older T-series devices that do not support the ASCII Protocol
+    """Communicate with Zaber devices over serial to move the stages.
+
+    This installation uses Zaber ASCII protocol with one device per COM port.
+    We support either config['port'] (single) or config['ports'] (multi).
     """
 
-    def __init__(self, config: dict, env='prod'):
-        """Setup the serial connection between with the zaber device
-
-        :param config: The zaber specific parameters defined in the 
-                    zaber_config.json file
-        :type config: dict {'port': <name of the serial port>,
-                    'location': <x, y, p>, ...} 
-        :param env: The environment to run the Zaber Controller.
-        :type env: string, either 'prod' or 'dev'
-        """
-        
-        self.zaber = None
-        self.stage_alias = {}
+    def __init__(self, config: dict, env: str = 'prod'):
         self.config = config
         self.env = env
+        self.stage_alias = {}
+
+        self.connections = []
+        self.port_devices = {}
+
         self._connect()
 
     def _connect(self):
-        """Create a serial communication with the zaber devices
-
-        :raises ConnectionFailedException: Logs critical if the connection fails
-        """
-        
         try:
             if self.env == 'prod':
                 logging.info('Establishing connection with Zaber devices')
-                self.zaber = Connection.open_serial_port(self.config['port'])
+
+                ports = self.config.get('ports') or [self.config.get('port')]
+                ports = [p for p in ports if p]
+
+                self.connections = []
+                self.port_devices = {}
+
+                for port in ports:
+                    c = Connection.open_serial_port(port)
+                    self.connections.append(c)
+                    devs = c.detect_devices()
+                    self.port_devices[port] = devs
+                    logging.info(f'{port}: detected {len(devs)} device(s)')
+
                 logging.info('Zaber devices successfully connected')
-                # Set the names and velocities for each axis
                 self._set_axis()
-                logging.info('Homing all')
-                self.home_arm()
+                if _zaber_home_on_startup():
+                    logging.info('Homing all')
+                    self.home_arm()
+                else:
+                    logging.info('Skipping homing on startup (zaber.home_on_startup=false)')
             elif self.env == 'dev':
-                logging.info('Establishing connection with mock Zaber devices')
-                self.zaber = Zaber(self.config['port'])
-                logging.info('Zaber devices successfully connected')
-                # Set the names for each axis
-                self._set_axis(self.zaber.detect_devices())
-                logging.info('Homing all')
-                self.home_arm()                
+                raise NotImplementedError("dev/mock mode not implemented for ASCII multi-port ZaberController")
+
         except ConnectionFailedException:
             logging.critical("Could not make connection to zaber stage")
             raise
 
     def disconnect(self):
-        """Closes the serial Connection
-        """
-
-        self.zaber.close()
-        logging.info('Closed Zaber device connection')
+        for c in getattr(self, "connections", []):
+            try:
+                c.close()
+            except Exception:
+                pass
+        logging.info('Closed Zaber device connection(s)')
 
     def _set_axis(self):
-        """Set the x, y, p stage dictionary variables based off the peripheral name
+        port_to_axis = {'COM3': 'x', 'COM4': 'y', 'COM5': 'p'}
 
-        :param stage: zaber x, y, p stage
-        :type stage: tuple of zaber device objects
-        """
-        
-        self.stages = self.zaber.detect_devices()
-        logging.info('Stage list {} '.format(self.stages))
-        for stage in self.stages:
-            name = stage.name
-            logging.info(stage.name)
-            if name == 'T-LSQ150D':
-                self.stage_alias[stage] = 'x'
-                stage.generic_command_with_units(CommandCode.SET_TARGET_SPEED, data = self.config['max_speed']['x'], from_unit = Units.NATIVE, to_unit = Units.NATIVE, timeout = 0.0)
-            elif name == 'A-LSQ150A-E01':
-                self.stage_alias[stage] = 'y'
-                stage.generic_command_with_units(CommandCode.SET_TARGET_SPEED, data = self.config['max_speed']['y'], from_unit = Units.NATIVE, to_unit = Units.NATIVE, timeout = 0.0)
-            elif name == 'T-LSQ075B':
-                self.stage_alias[stage] = 'p'
-                stage.generic_command_with_units(CommandCode.SET_TARGET_SPEED, data = self.config['max_speed']['p'], from_unit = Units.NATIVE, to_unit = Units.NATIVE, timeout = 0.0)       
+        self.stage_alias = {}
+
+        for port, devs in getattr(self, 'port_devices', {}).items():
+            axis_name = port_to_axis.get(port)
+            if axis_name is None:
+                logging.warning(f'No axis mapping for port {port}; skipping')
+                continue
+            if not devs:
+                logging.warning(f'No devices found on {port}')
+                continue
+
+            dev = devs[0]
+            axis_obj = dev.get_axis(1)
+            self.stage_alias[axis_obj] = axis_name
+
+            try:
+                sn = dev.serial_number
+            except Exception:
+                sn = None
+
+            logging.info(f'Assigned {dev.name} (SN {sn}) on {port} axis 1 -> {axis_name}')
+
         logging.info('Done setting axis')
 
-    def home_arm(self, arm: Optional[list]=None):
-        """Home either all or a subset of the devices
-
-        The devices include the x, y, p stages. The order in which
-        it homes is dependent on the list passed. The order is important 
-        to ensure the device does not crash while homing.
-
-        :param arm: list of the devices to home in the desired sequence,
-                    defaults to None, if None homes everything
-        :type arm: list of str, optional
-        :raises: Any Zaber exception requires restart and reinitialization of Zaber connection
-        """
-
-        home = ['p','x','y'] if arm == None else arm
+    def home_arm(self, arm: Optional[list] = None):
+        home = ['p', 'x', 'y'] if arm is None else arm
         for h in home:
-            try:
-                self.move_arm(h)
-            except:
-                raise
-    
-    def move_arm(self, arm: str, dist: Optional[float]=None, is_relative: bool=False):
-        """Move any arm 'x','y','p' by a fixed amount
+            self.move_arm(h)
 
-        :param arm: The arm to move x' or 'y' or 'p'
-        :type arm: str
-        :param dist: The distance to move in mm, if None: home arm, defaults to None
-        :type dist: float, optional
-        :param is_relative: True: move a relative distance, False: move an absolute distance,
-                    defaults to False
-        :type is_relative: bool, optional
-        :raises MovementFailedException: Logs if the desired position is not reached
-        :raises ConnectionFailedException: Logs if the zaber connection fails
-        """
-
+    def move_arm(self, arm: str, dist: Optional[float] = None, is_relative: bool = False):
+        device_arm = None
         for key, value in self.stage_alias.items():
             if value == arm:
                 device_arm = key
-                logging.info(device_arm)
-        
+                break
+
+        if device_arm is None:
+            raise ValueError(f"No device mapped for arm '{arm}'. Have: {set(self.stage_alias.values())}")
+
         try:
             if dist is None:
                 device_arm.home()
                 logging.info('homing')
             elif is_relative:
-                device_arm.move_relative(dist, Units.LENGTH_MILLIMETRES, timeout = 60)
+                device_arm.move_relative(dist, Units.LENGTH_MILLIMETRES)
             else:
-                device_arm.move_absolute(dist, Units.LENGTH_MILLIMETRES, timeout = 60)
+                device_arm.move_absolute(dist, Units.LENGTH_MILLIMETRES)
         except MovementFailedException:
             cur_pos = device_arm.get_position(unit=Units.LENGTH_MILLIMETRES)
             logging.critical('Failed to move {} arm'.format(device_arm))
@@ -140,20 +136,20 @@ class ZaberController():
             raise
         except ConnectionFailedException:
             logging.critical('Zaber Connection Failed')
+            raise
 
     def get_pos(self, arm: str) -> float:
-        """returns the positon of the zaber stage
-
-        :param arm: The arm to move x' or 'y' or 'p'
-        :type arm: str
-        :return: The stage location position in mm
-        :rtype: float
-        """
-        
+        device_arm = None
         for key, value in self.stage_alias.items():
             if value == arm:
                 device_arm = key
+                break
+
+        if device_arm is None:
+            raise ValueError(f"No device mapped for arm '{arm}'. Have: {set(self.stage_alias.values())}")
+
         try:
             return device_arm.get_position(unit=Units.LENGTH_MILLIMETRES)
         except ConnectionFailedException:
             logging.critical('Zaber Connection Failed')
+            raise

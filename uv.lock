@@ -487,7 +487,6 @@ name = "fish-sorter"
 version = "1.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "iter-tools" },
     { name = "matplotlib" },
     { name = "napari" },
     { name = "napari-micromanager" },
@@ -507,6 +506,7 @@ dependencies = [
     { name = "pyqt6" },
     { name = "pyqt6-qt6" },
     { name = "pyqt6-sip" },
+    { name = "pyserial" },
     { name = "qtpy" },
     { name = "scikit-image" },
     { name = "scipy" },
@@ -529,7 +529,6 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "iter-tools", specifier = "==0.0.2" },
     { name = "matplotlib", specifier = "==3.10.0" },
     { name = "mypy", marker = "extra == 'dev'" },
     { name = "napari", specifier = "==0.5.6" },
@@ -543,13 +542,14 @@ requires-dist = [
     { name = "pillow", specifier = "==11.1.0" },
     { name = "psygnal", specifier = "==0.12.0" },
     { name = "pydantic", specifier = "==2.10.6" },
-    { name = "pymmcore", specifier = "==11.2.1.71.0" },
+    { name = "pymmcore", specifier = "==11.10.0.74.1" },
     { name = "pymmcore-plus", specifier = "==0.13.3" },
     { name = "pymmcore-widgets", specifier = "==0.9.1" },
     { name = "pymodbus", specifier = "==3.8.3" },
     { name = "pyqt6", specifier = "==6.8.1" },
     { name = "pyqt6-qt6", specifier = "==6.8.2" },
     { name = "pyqt6-sip", specifier = "==13.10.0" },
+    { name = "pyserial", specifier = "==3.5" },
     { name = "pytest", marker = "extra == 'dev'" },
     { name = "pytest-cov", marker = "extra == 'dev'" },
     { name = "qtpy", specifier = "==2.4.2" },
@@ -792,15 +792,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ef/4c/5dd1d8af08107f88c7f741ead7a40854b8ac24ddf9ae850afbcf698aa552/ipython_pygments_lexers-1.1.1.tar.gz", hash = "sha256:09c0138009e56b6854f9535736f4171d855c8c08a563a0dcd8022f78355c7e81", size = 8393, upload-time = "2025-01-17T11:24:34.505Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d9/33/1f075bf72b0b747cb3288d011319aaf64083cf2efef8354174e3ed4540e2/ipython_pygments_lexers-1.1.1-py3-none-any.whl", hash = "sha256:a9462224a505ade19a605f71f8fa63c2048833ce50abc86768a0d81d876dc81c", size = 8074, upload-time = "2025-01-17T11:24:33.271Z" },
-]
-
-[[package]]
-name = "iter-tools"
-version = "0.0.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/99/b5/9226e32ecd7a942cc11a04789972c7cf01e4ad6d5cc6beeefe2578324800/iter_tools-0.0.2.tar.gz", hash = "sha256:f85c5389a4257c5725d7e6b6dcbadb03e7b4a0cf532a375a04dbe895c84da8a7", size = 2258, upload-time = "2023-07-08T14:05:22.054Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/34/fe/1011ab2ad6a212fca66e2ae61eddd8b743b3d0699301309fe7c5705bd327/iter_tools-0.0.2-py3-none-any.whl", hash = "sha256:12e978fd41024f6e9df9ec00b675d3b82fa4e736528623f5022781d9c05664ef", size = 2678, upload-time = "2023-07-08T14:05:20.528Z" },
 ]
 
 [[package]]
@@ -1667,17 +1658,17 @@ wheels = [
 
 [[package]]
 name = "pymmcore"
-version = "11.2.1.71.0"
+version = "11.10.0.74.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/cd/bf/1c02bbb3bc0f71555b28a99fe5a562039176bdeb5e461c74377c3ecca2af/pymmcore-11.2.1.71.0.tar.gz", hash = "sha256:4d9c1a35aace84ffce1534f0b48f2d4fadbee8dbb2758339bb375f7188569b95", size = 192943, upload-time = "2025-01-17T22:23:16.681Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/18/e0/780e494431ccaa10051e97600c19d0b35aaa04b8b527bba204ed7329548e/pymmcore-11.10.0.74.1.tar.gz", hash = "sha256:c8a5dc46cfc852b87da7347069e246ad3021e4bf65d59d10aa30795a6deff0de", size = 229958, upload-time = "2025-10-27T18:46:26.915Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bc/50/4cd7c416513bcd82aa4651bd4d9cc169bf5c92a18a3c3d6bc7cf7709227e/pymmcore-11.2.1.71.0-cp312-cp312-macosx_10_14_x86_64.whl", hash = "sha256:d539f863f9a7752b1e18c6765de7655c1c38a150a1bf685ee94c5597d6c3fb7c", size = 924554, upload-time = "2025-01-17T22:22:51.674Z" },
-    { url = "https://files.pythonhosted.org/packages/b8/ed/c2cede64233def5c365610804c74cc0db875e167eef3a08955201a9b3f17/pymmcore-11.2.1.71.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:b3dabcf7c887d4697863fc60e8fcab3fd09ff6bb6e698aabf759e556225023cd", size = 856467, upload-time = "2025-01-17T22:22:54.312Z" },
-    { url = "https://files.pythonhosted.org/packages/30/e0/d4d20db99603cec7ec2aaf58688db4dcc0aaf07a6af5542a2cf9c430f095/pymmcore-11.2.1.71.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d0199303cb217e3154c9a8083a92162fecfa299ec3c360edcad921097bf2788b", size = 1027839, upload-time = "2025-01-17T22:22:55.795Z" },
-    { url = "https://files.pythonhosted.org/packages/61/38/c887dc84415b0ae2ea44aca36ded4ddd47cf4a9cefd0a5dcb22e7a2223bc/pymmcore-11.2.1.71.0-cp312-cp312-win_amd64.whl", hash = "sha256:594f3bbb9d16150d8953912be48e8ae8ae59db1a962bb297ee4b11d0ba1b0b16", size = 601978, upload-time = "2025-01-17T22:22:57.4Z" },
+    { url = "https://files.pythonhosted.org/packages/b6/0f/2f71103bfe115d35dc5140d7ae31dfa9396fd650a929c718fdd7d036ef79/pymmcore-11.10.0.74.1-cp312-cp312-macosx_10_14_x86_64.whl", hash = "sha256:c81097613b6e79c212b2a8cde9640706929b4ac6bf069cd73edbe5463caed311", size = 981957, upload-time = "2025-10-27T18:46:07.964Z" },
+    { url = "https://files.pythonhosted.org/packages/14/ca/bafb76b572b887ae01943b1b8bb9f909d8092d38530180cc1ca47eeda903/pymmcore-11.10.0.74.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:2eb514ae42dc69cfa618265df970d8eda67d99ca4195d519f3c348841fa56db5", size = 927219, upload-time = "2025-10-27T18:46:09.405Z" },
+    { url = "https://files.pythonhosted.org/packages/2d/5e/9304901387645d80d2191cd9d13be1050b353557ea143bd5d8f027fc6704/pymmcore-11.10.0.74.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:285e11886a4b21544957608ce2b2c415363a66caac91f8c560b1769c90a51949", size = 1165630, upload-time = "2025-10-27T18:46:11.109Z" },
+    { url = "https://files.pythonhosted.org/packages/b5/4c/24d3c67acdc12e68b6e552e0980c480c907ca4347af990ef7d7add4bf093/pymmcore-11.10.0.74.1-cp312-cp312-win_amd64.whl", hash = "sha256:0fd359c01e9dfb1ddacee9145f78aac86b99160e9cfbc249ee8717935c9c72d3", size = 751638, upload-time = "2025-10-27T18:46:12.783Z" },
 ]
 
 [[package]]
@@ -1799,6 +1790,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/99/34/2ec54bd475f0a811df1d32be485f2344cf9e8b388ce7adb26b46ce5552d4/PyQt6_sip-13.10.0-cp312-cp312-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:ae15358941f127cd3d1ab09c1ebd45c4dabb0b2e91587b9eebde0279d0039c54", size = 303798, upload-time = "2025-02-02T17:13:46.366Z" },
     { url = "https://files.pythonhosted.org/packages/0c/e4/82099bb4ab8bc152b5718541e93c0b3adf7566c0f307c9e58e2368b8c517/PyQt6_sip-13.10.0-cp312-cp312-win_amd64.whl", hash = "sha256:ad573184fa8b00041944e5a17d150ab0d08db2d2189e39c9373574ebab3f2e58", size = 53569, upload-time = "2025-02-02T17:13:47.502Z" },
     { url = "https://files.pythonhosted.org/packages/e3/09/90e0378887a3cb9664da77061229cf8e97e6ec25a5611b7dbc9cc3e02c78/PyQt6_sip-13.10.0-cp312-cp312-win_arm64.whl", hash = "sha256:2d579d810d0047d40bde9c6aef281d6ed218db93c9496ebc9e55b9e6f27a229d", size = 45430, upload-time = "2025-02-02T17:13:48.619Z" },
+]
+
+[[package]]
+name = "pyserial"
+version = "3.5"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/1e/7d/ae3f0a63f41e4d2f6cb66a5b57197850f919f59e558159a4dd3a818f5082/pyserial-3.5.tar.gz", hash = "sha256:3c77e014170dfffbd816e6ffc205e9842efb10be9f58ec16d3e8675b4925cddb", size = 159125, upload-time = "2020-11-23T03:59:15.045Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/07/bc/587a445451b253b285629263eb51c2d8e9bcea4fc97826266d186f96f558/pyserial-3.5-py2.py3-none-any.whl", hash = "sha256:c4451db6ba391ca6ca299fb3ec7bae67a5c55dde170964c7a14ceefec02f2cf0", size = 90585, upload-time = "2020-11-23T03:59:13.41Z" },
 ]
 
 [[package]]

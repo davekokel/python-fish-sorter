@@ -77,11 +77,20 @@ class ImageWidget(QWidget):
         layer.selectable = False
 
     def get_mag(self):
-        """Helper function to get the current magnification of the microscope
-        """
+        """Helper function to get the current magnification of the microscope"""
 
         logging.info('Getting the magnification')
-        obj_dev = self.mmc.guessObjectiveDevices()[0]
+
+        obj_devs = self.mmc.guessObjectiveDevices()
+        if not obj_devs:
+            logging.warning("No objective device found (sim mode). Using default magnification.")
+            mag = 1.0
+            self.pixel_size_um = CAM_PX_UM / mag
+            self.fov_h = CAM_Y_PX * self.pixel_size_um
+            self.fov_w = CAM_X_PX * self.pixel_size_um
+            return
+
+        obj_dev = obj_devs[0]
         obj_label = self.mmc.getStateLabel(obj_dev)
 
         match = re.search(r'([\d.]+)x', obj_label)
