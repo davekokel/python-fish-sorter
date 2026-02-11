@@ -45,7 +45,7 @@ class Pipette2PickWidget(QPushButton):
         self.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed))
         self.picking = picking
         self._mmc = CMMCorePlus.instance()
-        self.setText("Move to Pick Position")
+        self.setText("Move pipette to pick position")
         self.clicked.connect(self._pick_pos)
 
     def _pick_pos(self)->None:
@@ -59,7 +59,7 @@ class Pipette2DispWidget(QPushButton):
         self.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed))
         self.picking = picking
         self._mmc = CMMCorePlus.instance()
-        self.setText("Move to Dispense Position")
+        self.setText("Move pipette to dispense position")
         self.clicked.connect(self._disp_pos)
 
     def _disp_pos(self)->None:
@@ -73,7 +73,7 @@ class Pipette2ClearWidget(QPushButton):
         self.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed))
         self.picking = picking
         self._mmc = CMMCorePlus.instance()
-        self.setText("Move to Clearance Position")
+        self.setText("Move pipette arm to max height")
         self.clicked.connect(self._clear_pos)
 
     def _clear_pos(self)->None:
@@ -86,7 +86,7 @@ class Pipette2SwingWidget(QPushButton):
         self.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed))
         self.picking = picking
         self._mmc = CMMCorePlus.instance()
-        self.setText("Move to Swing Position")
+        self.setText("Move collection plate away + arm to swing height")
         self.clicked.connect(self._swing_pos)
 
     def _swing_pos(self)->None:
@@ -99,7 +99,7 @@ class HomeWidget(QPushButton):
         self.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed))
         self.picking = picking
         self._mmc = CMMCorePlus.instance()
-        self.setText("Move Dispense Stages to Home")
+        self.setText("Move collection plate AWAY for picking")
         self.clicked.connect(self.picking.pick.phc.dest_home)
 
 
@@ -109,5 +109,7 @@ class ImageWidget(QPushButton):
         self.setSizePolicy(QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed))
         self.picking = picking
         self._mmc = CMMCorePlus.instance()
-        self.setText("Move Stages to Image")
+        self.setText("Move collection plate IN for collecting")
         self.clicked.connect(self.picking.pick.phc.move_fluor_img)
+
+
