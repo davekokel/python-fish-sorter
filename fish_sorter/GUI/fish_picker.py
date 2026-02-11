@@ -12,7 +12,8 @@ import napari
 import numpy as np
 from napari.utils.colormaps import Colormap
 from qtpy.QtCore import Qt, QTimer
-from qtpy.QtWidgets import QVBoxLayout, QWidget
+from qtpy.QtWidgets import QWidget, QVBoxLayout, QLabel, QGroupBox, QHBoxLayout, QPushButton, QDoubleSpinBox
+
 from tifffile import imwrite
 from useq import MDASequence
 
@@ -273,7 +274,33 @@ class FishPicker:
             self.core.loadSystemConfiguration(str(cfg_path))
             _ensure_active_camera(self.core)
 
-            # Apply a default exposure if provided and if we can
+            try:
+                from pymmcore_widgets.control import PresetsWidget
+                from pymmcore_widgets.device_properties import PropertyBrowser
+                from qtpy.QtWidgets import QTabWidget
+
+                # Tabbed presets: one tab per Micro-Manager config group
+                self.mm_presets_tabs = QTabWidget()
+                try:
+                    groups = list(self.core.getAvailableConfigGroups())
+                except Exception:
+                    groups = []
+
+                for g in groups:
+                    try:
+                        w = PresetsWidget(group=g, mmcore=self.core)
+                        self.mm_presets_tabs.addTab(w, g)
+                    except Exception as e:
+                        logging.warning(f"MM Presets tab failed for group={g!r}: {e!r}")
+
+                self.v.window.add_dock_widget(self.mm_presets_tabs, name="MM Presets", area="right", tabify=True)
+
+                # Raw device properties (continuous controls like Voltage)
+                self.mm_props = PropertyBrowser(mmcore=self.core)
+                self.v.window.add_dock_widget(self.mm_props, name="MM Properties", area="right", tabify=True)
+
+            except Exception as e:
+                logging.warning(f"MM Presets/Properties dock not available: {e!r}")# Apply a default exposure if provided and if we can
             try:
                 exp = mm.get("default_exposure_ms", None)
                 if exp is not None:
@@ -573,3 +600,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     FishPicker(sim=args.sim)
+
+
+
+
+
+
+
+
