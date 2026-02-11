@@ -15,7 +15,7 @@ from qtpy.QtCore import Qt, QTimer
 from qtpy.QtWidgets import QWidget, QVBoxLayout, QLabel, QGroupBox, QHBoxLayout, QPushButton, QDoubleSpinBox
 
 from tifffile import imwrite
-from useq import MDASequence
+from useq import MDASequence, Channel
 
 from fish_sorter.GUI.classify import Classify
 from fish_sorter.GUI.image_gui import ImageWidget
@@ -384,20 +384,18 @@ class FishPicker:
             except Exception:
                 presets = []
 
+        # De-dup while preserving order
+        seen = set()
+        presets = [p for p in presets if not (str(p) in seen or seen.add(str(p)))]
+
         if group and presets:
-            # Build MDA channels from available presets
+            exp = float(self.core.getExposure())
+            # In useq.Channel: group = config group name, config = preset name
             sequence = sequence.replace(
-                channels=tuple(
-                    {"config": g, "preset": p, "exposure": self.core.getExposure()}
-                    for p in presets
-                    for g in [group]
-                )
+                channels=tuple(Channel(group=group, config=str(p), exposure=exp) for p in presets)
             )
         else:
-            # No valid channels: keep empty to avoid crashes
-            sequence = sequence.replace(channels=())
-
-        self.mda.setValue(sequence)
+            sequence = sequence.replace(channels=())self.mda.setValue(sequence)
 
         seq = self.mda.value()
         new_seq = MDASequence(
@@ -613,6 +611,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     FishPicker(sim=args.sim)
+
 
 
 

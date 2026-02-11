@@ -11,17 +11,17 @@ class StagePositionsWidget(QWidget):
 
     def _create_gui(self):
         layout = QGridLayout(self)
-        layout.addWidget(QLabel("Zabers (x/y plate, p pipette)"), 0, 0, 1, 4)
+        layout.addWidget(QLabel("Zabers: plate x/y, arm p"), 0, 0, 1, 4)
 
-        layout.addWidget(QLabel("x"), 1, 0)
+        layout.addWidget(QLabel("plate_x"), 1, 0)
         self.x_label = QLabel("—")
         layout.addWidget(self.x_label, 1, 1)
 
-        layout.addWidget(QLabel("y"), 1, 2)
+        layout.addWidget(QLabel("plate_y"), 1, 2)
         self.y_label = QLabel("—")
         layout.addWidget(self.y_label, 1, 3)
 
-        layout.addWidget(QLabel("p"), 2, 0)
+        layout.addWidget(QLabel("arm_p"), 2, 0)
         self.p_label = QLabel("—")
         layout.addWidget(self.p_label, 2, 1)
 
@@ -42,4 +42,5 @@ class StagePositionsWidget(QWidget):
             self.y_label.setText("ERR")
             self.p_label.setText("ERR")
             logging.warning(f"StagePositionsWidget refresh failed: {e!r}")
+
 
