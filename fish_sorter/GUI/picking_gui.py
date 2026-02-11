@@ -69,6 +69,7 @@ class PickGUI(QWidget):
         img = ImageWidget(self)
         home = HomeWidget(self)
         move_pipette = MovePipette(self)
+        stage_pos = StagePositionsWidget(self)
         self.pw = PickWidget(self)
         self.pw.setEnabled(False)
         self.pw.pause_button.setEnabled(False)
@@ -99,6 +100,7 @@ class PickGUI(QWidget):
         self._update_calib_status()
         
         layout.addWidget(move_pipette, 5, 0)
+        layout.addWidget(stage_pos, 5, 1, 1, 3)
         layout.addWidget(time, 6, 0)
         layout.addWidget(draw, 7, 0)
         layout.addWidget(expel, 7, 1)
@@ -111,18 +113,29 @@ class PickGUI(QWidget):
         layout.addWidget(reset, 10, 1)
 
     def _update_calib_status(self):
-        """Update the GUI that the pick and or dispense heights
-        are calibrated
-        """
-        
+        """Update the GUI that the pick and/or dispense positions are set."""
+
+        def _fmt_mm(v):
+            try:
+                return f"{float(v):.3f} mm"
+            except Exception:
+                return str(v)
+
         if self.pick_calib:
-            self.pick_calib_status.setText('✅ Pick Calibrated')
+            try:
+                self.pick_calib_status.setText(f"Pick position set: {_fmt_mm(self.pick.phc.pick_h)}")
+            except Exception:
+                self.pick_calib_status.setText("Pick position set")
         else:
-            self.pick_calib_status.setText('❌ Pick Not Calibrated')
+            self.pick_calib_status.setText("Pick position not set")
+
         if self.disp_calib:
-            self.disp_calib_status.setText('✅ Disp Calibrated')
+            try:
+                self.disp_calib_status.setText(f"Disp position set: {_fmt_mm(self.pick.phc.disp_h)}")
+            except Exception:
+                self.disp_calib_status.setText("Disp position set")
         else:
-            self.disp_calib_status.setText('❌ Disp Not Calibrated')
+            self.disp_calib_status.setText("Disp position not set")
 
     def update_pick_widgets(self, status: bool=True):
         """Updates the widgets dependent on the Pick class
@@ -153,7 +166,7 @@ class PipettePickCalibWidget(QPushButton):
 
     def _create_button(self)->None:
         
-        self.setText("Calibrate Pick Position")
+        self.setText("Set Pick Position")
         self.clicked.connect(self._pick_calib)
 
     def _pick_calib(self)->None:
@@ -183,7 +196,7 @@ class PipetteDispCalibWidget(QPushButton):
 
     def _create_button(self)->None:
         
-        self.setText("Calibrate Dispense Position")
+        self.setText("Set Dispense Position")
         self.clicked.connect(self._disp_calib)
 
     def _disp_calib(self)->None:
@@ -307,6 +320,47 @@ class Pipette2SwingWidget(QPushButton):
         self.picking.pick.phc.move_pipette(pos='pipette_swing')
 
 
+class StagePositionsWidget(QWidget):
+    """Operator-friendly readout of current Zaber positions (x/y/p)."""
+
+    def __init__(self, picking, parent: QWidget | None=None):
+        super().__init__(parent=parent)
+        self.picking = picking
+        self._create_gui()
+
+    def _create_gui(self):
+        layout = QGridLayout(self)
+        layout.addWidget(QLabel("Stage Positions (Zaber)"), 0, 0, 1, 4)
+
+        layout.addWidget(QLabel("x"), 1, 0)
+        self.x_label = QLabel("—")
+        layout.addWidget(self.x_label, 1, 1)
+
+        layout.addWidget(QLabel("y"), 1, 2)
+        self.y_label = QLabel("—")
+        layout.addWidget(self.y_label, 1, 3)
+
+        layout.addWidget(QLabel("p"), 2, 0)
+        self.p_label = QLabel("—")
+        layout.addWidget(self.p_label, 2, 1)
+
+        self.btn_refresh = QPushButton("Refresh")
+        self.btn_refresh.clicked.connect(self.refresh)
+        layout.addWidget(self.btn_refresh, 2, 2, 1, 2)
+
+        self.refresh()
+
+    def refresh(self):
+        try:
+            zc = self.picking.pick.phc.zc
+            self.x_label.setText(str(zc.get_pos("x")))
+            self.y_label.setText(str(zc.get_pos("y")))
+            self.p_label.setText(str(zc.get_pos("p")))
+        except Exception as e:
+            self.x_label.setText("ERR")
+            self.y_label.setText("ERR")
+            self.p_label.setText("ERR")
+            logging.warning(f"StagePositionsWidget refresh failed: {e!r}")
 class MovePipette(QWidget):
     """A widget to move the pipette a user-defined distance"""
 
@@ -829,3 +883,8 @@ class SinglePickWidget(QWidget):
         """
 
         logging.info(f'{msg}')
+
+
+
+
+

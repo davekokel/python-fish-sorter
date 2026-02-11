@@ -56,14 +56,21 @@ class ImageWidget(QWidget):
 
         if preview_layer is None:
             return
+        # Draw in preview pixel coordinates (napari uses row/col == y/x).
+        try:
+            h, w = preview_layer.data.shape[-2], preview_layer.data.shape[-1]
+        except Exception:
+            return
+
+        ymid = float(h) / 2.0
+        xmid = float(w) / 2.0
 
         lines = [
-            [[0, self.fov_h / 2], [self.fov_w, self.fov_h / 2]],
-            [[self.fov_w / 2, 0], [self.fov_w / 2, self.fov_h]]
+            [[ymid, 0.0], [ymid, float(w)]],      # horizontal line across image
+            [[0.0, xmid], [float(h), xmid]],      # vertical line across image
         ]
-        
         if self.crosshair_layer in self.viewer.layers:
-            self.viewer.layers.remove(self.crosshair_layer)
+            del self.viewer.layers[self.crosshair_layer]
 
         layer = self.viewer.add_shapes(
             lines,
@@ -110,7 +117,9 @@ class ImageWidget(QWidget):
         """
 
         if self.crosshair_layer in self.viewer.layers:
-            self.viewer.layers.remove(self.crosshair_layer)
+            del self.viewer.layers[self.crosshair_layer]
         else:
             self.get_mag()
             self._create_crosshairs()
+
+
