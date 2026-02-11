@@ -373,7 +373,9 @@ class FishPicker:
         self.main_window._show_dock_widget("MDA")
         self.mda = self.v.window._dock_widgets.get("MDA").widget()
 
-        sequence = self.mosaic.init_pos(self.img_tools.fov_w, self.img_tools.fov_h)        # Channels:
+        sequence = self.mosaic.init_pos(self.img_tools.fov_w, self.img_tools.fov_h)
+
+        # Channels:
         # - Prefer explicit config from fish_sorter.local.toml (micromanager.channel_group + default_presets)
         # - Otherwise, fall back to whatever Micro-Manager reports in the loaded system configuration.
         group, presets = _mm_channel_group_and_presets(self.core, self.site_cfg)
@@ -395,7 +397,9 @@ class FishPicker:
                 channels=tuple(Channel(group=group, config=str(p), exposure=exp) for p in presets)
             )
         else:
-            sequence = sequence.replace(channels=())self.mda.setValue(sequence)
+            sequence = sequence.replace(channels=())
+
+        self.mda.setValue(sequence)
 
         seq = self.mda.value()
         new_seq = MDASequence(
@@ -611,6 +615,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     FishPicker(sim=args.sim)
+
 
 
 
