@@ -78,10 +78,10 @@ class PickGUI(QWidget):
         self.pick_calib_status = QLabel('❌ Pick Not Calibrated')
         calib_disp = PipetteDispCalibWidget(self)
         self.disp_calib_status = QLabel('❌ Disp Not Calibrated')
-        move2pick = Pipette2PickWidget(self)
-        move2disp = Pipette2DispWidget(self)
-        move2clear = Pipette2ClearWidget(self)
-        move2swing = Pipette2SwingWidget(self)
+        self.btn_move2pick = Pipette2PickWidget(self)
+        self.btn_move2disp = Pipette2DispWidget(self)
+        self.btn_move2clear = Pipette2ClearWidget(self)
+        self.btn_move2swing = Pipette2SwingWidget(self)
         img = ImageWidget(self)
         home = HomeWidget(self)
         move_pipette = MovePipette(self)
@@ -92,7 +92,7 @@ class PickGUI(QWidget):
         stage_box_layout.setContentsMargins(0, 0, 0, 0)
 
         stage_tabs = QTabWidget()
-        stage_tabs.addTab(stage_pos, "Stage")
+        stage_tabs.addTab(stage_pos, "Zabers")
         stage_tabs.addTab(disp_plate_calib, "Dispense Plate")
         stage_box_layout.addWidget(stage_tabs)
         self.pw = PickWidget(self)
@@ -114,10 +114,10 @@ class PickGUI(QWidget):
         layout.addWidget(self.calib_pick, 1, 0)
         layout.addWidget(self.pick_calib_status, 1, 3)
         layout.addWidget(calib_disp, 1, 1)
-        layout.addWidget(move2swing, 1, 2)
-        layout.addWidget(move2pick, 2, 0)
-        layout.addWidget(move2disp, 2, 1)
-        layout.addWidget(move2clear, 2, 2)
+        layout.addWidget(self.btn_move2swing, 1, 2)
+        layout.addWidget(self.btn_move2pick, 2, 0)
+        layout.addWidget(self.btn_move2disp, 2, 1)
+        layout.addWidget(self.btn_move2clear, 2, 2)
         layout.addWidget(img, 3, 0)
         layout.addWidget(home, 3, 1)
         layout.addWidget(self.pick_calib_status, 4, 0)
@@ -354,6 +354,7 @@ class PipettePressureWidget(QPushButton):
         
         self.pressure_state = not self.pressure_state
         self.picking.pick.phc.pressure(self.pressure_state)
+
 
 
 
