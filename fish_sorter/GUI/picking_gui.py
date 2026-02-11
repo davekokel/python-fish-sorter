@@ -37,10 +37,10 @@ from fish_sorter.GUI.picking import Pick
 
 from fish_sorter.GUI.picking_widgets.stage_widgets import StagePositionsWidget
 from fish_sorter.GUI.picking_widgets.dispense_plate import DispensePlateCalibWidget
-from fish_sorter.GUI.picking_widgets.top_buttons import (
-    PipettePickCalibWidget, PipetteDispCalibWidget,
-    Pipette2PickWidget, Pipette2DispWidget, Pipette2ClearWidget, Pipette2SwingWidget,
-    HomeWidget, ImageWidget,
+
+from fish_sorter.GUI.picking_widgets.run_widgets import (
+    PickWidget, NewExptWidget, ResetWidget,
+    SinglePickWidget,
 )
 
 COLOR_TYPES = Union[
@@ -643,6 +643,7 @@ class SinglePickWidget(QWidget):
         """
 
         logging.info(f'{msg}')
+
 
 
 
