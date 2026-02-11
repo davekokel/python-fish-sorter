@@ -1,0 +1,26 @@
+axis_order:
+- p
+- g
+grid_plan:
+  bottom: 48346.5
+  fov_height: 13312.0
+  fov_width: 13312.0
+  left: -34421.3
+  overlap:
+  - 5.0
+  - 5.0
+  right: 53534.4
+  top: -10730.3
+metadata:
+  napari_micromanager:
+    split_channels: false
+  pymmcore_widgets:
+    format: ome-zarr
+    save_dir: D:\fishpicker_expts
+    save_name: ''
+    should_save: true
+    version: 0.9.1
+stage_positions:
+- x: -34421.6
+  y: -10729.800000000001
+  z: 8540.01

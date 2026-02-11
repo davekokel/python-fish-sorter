@@ -300,7 +300,9 @@ class FishPicker:
                 self.v.window.add_dock_widget(self.mm_props, name="MM Properties", area="right", tabify=True)
 
             except Exception as e:
-                logging.warning(f"MM Presets/Properties dock not available: {e!r}")# Apply a default exposure if provided and if we can
+                logging.warning(f"MM Presets/Properties dock not available: {e!r}")
+
+            # Apply a default exposure if provided and if we can
             try:
                 exp = mm.get("default_exposure_ms", None)
                 if exp is not None:
@@ -371,17 +373,28 @@ class FishPicker:
         self.main_window._show_dock_widget("MDA")
         self.mda = self.v.window._dock_widgets.get("MDA").widget()
 
-        sequence = self.mosaic.init_pos(self.img_tools.fov_w, self.img_tools.fov_h)
-
-        # If there is no channel group/presets in Micro-Manager, do NOT populate channels with GFP/TXR.
+        sequence = self.mosaic.init_pos(self.img_tools.fov_w, self.img_tools.fov_h)        # Channels:
+        # - Prefer explicit config from fish_sorter.local.toml (micromanager.channel_group + default_presets)
+        # - Otherwise, fall back to whatever Micro-Manager reports in the loaded system configuration.
         group, presets = _mm_channel_group_and_presets(self.core, self.site_cfg)
+
+        if group and not presets:
+            try:
+                presets = list(self.core.getAvailableConfigs(group))
+            except Exception:
+                presets = []
+
         if group and presets:
-            # Use configured presets
-            channels = tuple(type(sequence).channels.fget(sequence)) if hasattr(type(sequence), "channels") else ()
-            # safest: leave as whatever mosaic/init_pos already produced (repo-specific)
-            pass
+            # Build MDA channels from available presets
+            sequence = sequence.replace(
+                channels=tuple(
+                    {"config": g, "preset": p, "exposure": self.core.getExposure()}
+                    for p in presets
+                    for g in [group]
+                )
+            )
         else:
-            # Force no channels to avoid "Channel/GFP does not exist" crashes
+            # No valid channels: keep empty to avoid crashes
             sequence = sequence.replace(channels=())
 
         self.mda.setValue(sequence)
@@ -600,6 +613,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     FishPicker(sim=args.sim)
+
+
 
 
 

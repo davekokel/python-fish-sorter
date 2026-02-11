@@ -34,13 +34,13 @@
     },
     "dispense_plate": {
         "TL_corner": {
-            "x": 135500.0,
-            "y": 85750.0,
+            "x": 128866.80078124994,
+            "y": 65743.33593749997,
             "description": "The stage positions of well A01, in um"
         },
         "BR_corner": {
-            "x": 57500.0,
-            "y": 120850.0,
+            "x": 50553.93749999998,
+            "y": 109164.43749999994,
             "description": "The stage positions of the highest well, in um"
         }
     }
