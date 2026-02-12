@@ -21,6 +21,7 @@ from fish_sorter.GUI.classify import Classify
 from fish_sorter.GUI.image_gui import ImageWidget
 from fish_sorter.GUI.picking import Pick
 from fish_sorter.GUI.picking_gui import PickGUI
+from fish_sorter.GUI.picking_widgets.workflow_panel import WorkflowPanel
 from fish_sorter.GUI.selection_gui import SelectGUI
 from fish_sorter.GUI.setup_gui import SetupWidget
 from fish_sorter.hardware.imaging_plate import ImagingPlate
@@ -324,7 +325,7 @@ class FishPicker:
 
         self.image_init()
         self.assign_widgets()
-        self.main_window._show_dock_widget("MDA")
+        self.v.window._qt_viewer._dock_widgets["Workflow"].show()
 
         napari.run()
 
@@ -340,6 +341,19 @@ class FishPicker:
         self.pick_gui.new_expt.new_exp_req.connect(self._new_exp)
         self.pick_gui.calib_pick.save_pick_h.connect(self._save_pick_h)
         self.v.window.add_dock_widget(self.pick_gui, name="Picking", area="right", tabify=True)
+
+        # Workflow dock (top-level)
+        try:
+            # give PickGUI a backref so WorkflowPanel can navigate
+            self.pick_gui.fishpicker = self
+            # also expose the sub-tab widget for "Dispense Plate" navigation
+            if hasattr(self.pick_gui, "stage_tabs"):
+                self.pick_gui.stage_tabs = self.pick_gui.stage_tabs
+
+            self.workflow = WorkflowPanel(self.pick_gui)
+            self.v.window.add_dock_widget(self.workflow, name="Workflow", area="right", tabify=True)
+        except Exception as e:
+            logging.warning(f"Workflow dock failed: {e!r}")
 
     def image_init(self):
         self.mosaic = Mosaic(self.v)
@@ -370,7 +384,7 @@ class FishPicker:
             self.img_tools._create_crosshairs()
 
     def setup_MDA(self):
-        self.main_window._show_dock_widget("MDA")
+        self.v.window._qt_viewer._dock_widgets["Workflow"].show()
         self.mda = self.v.window._dock_widgets.get("MDA").widget()
 
         sequence = self.mosaic.init_pos(self.img_tools.fov_w, self.img_tools.fov_h)
@@ -615,6 +629,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     FishPicker(sim=args.sim)
+
 
 
 

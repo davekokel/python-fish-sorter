@@ -37,6 +37,7 @@ from fish_sorter.GUI.picking import Pick
 
 from fish_sorter.GUI.picking_widgets.stage_widgets import StagePositionsWidget
 from fish_sorter.GUI.picking_widgets.dispense_plate import DispensePlateCalibWidget
+from fish_sorter.GUI.picking_widgets.workflow_panel import WorkflowPanel
 
 from fish_sorter.GUI.picking_widgets.top_buttons import (
     PipettePickCalibWidget, PipetteDispCalibWidget,
@@ -87,14 +88,16 @@ class PickGUI(QWidget):
         move_pipette = MovePipette(self)
         stage_pos = StagePositionsWidget(self)
         disp_plate_calib = DispensePlateCalibWidget(self)
+        workflow = WorkflowPanel(self)
         stage_box = QWidget()
         stage_box_layout = QVBoxLayout(stage_box)
         stage_box_layout.setContentsMargins(0, 0, 0, 0)
 
-        stage_tabs = QTabWidget()
-        stage_tabs.addTab(stage_pos, "Zabers")
-        stage_tabs.addTab(disp_plate_calib, "Dispense Plate")
-        stage_box_layout.addWidget(stage_tabs)
+        self.stage_tabs = QTabWidget()
+        self.stage_tabs.addTab(stage_pos, "Zabers")
+        self.stage_tabs.addTab(disp_plate_calib, "Dispense Plate")
+        stage_tabs.addTab(workflow, "Workflow")
+        stage_box_layout.addWidget(self.stage_tabs)
         self.pw = PickWidget(self)
         self.pw.setEnabled(False)
         self.pw.pause_button.setEnabled(False)
@@ -354,6 +357,8 @@ class PipettePressureWidget(QPushButton):
         
         self.pressure_state = not self.pressure_state
         self.picking.pick.phc.pressure(self.pressure_state)
+
+
 
 
 
