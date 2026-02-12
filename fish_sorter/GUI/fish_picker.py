@@ -28,16 +28,11 @@ from fish_sorter.hardware.imaging_plate import ImagingPlate
 from fish_sorter.hardware.picking_pipette import PickingPipette
 from fish_sorter.helpers.mosaic import Mosaic
 
-# For simulation
 try:
     from mda_simulator.mmcore import FakeDemoCamera
 except ModuleNotFoundError:
     FakeDemoCamera = None
 
-
-# ----------------------------
-# Central site config
-# ----------------------------
 
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
@@ -50,14 +45,9 @@ def _load_site_cfg() -> dict:
     return tomllib.loads(cfg.read_text(encoding="utf-8"))
 
 
-# ----------------------------
-# Logging noise suppression (proper, non-invasive)
-# ----------------------------
-
 class _SuppressKnownMmcorePlusNoise(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         msg = record.getMessage()
-        # Suppress ONLY the known noisy callback mismatch
         if "MMCorePlus callback 'imageSnapped'" in msg and "signal has 0 argument(s) but 1 provided" in msg:
             return False
         if "QCoreSignaler.imageSnapped" in msg and "signal has 0 argument(s) but 1 provided" in msg:
@@ -70,12 +60,7 @@ def _apply_log_filters() -> None:
     logging.getLogger("pymmcore_plus").addFilter(_SuppressKnownMmcorePlusNoise())
 
 
-# ----------------------------
-# Micro-Manager helpers
-# ----------------------------
-
 def _ensure_active_camera(core) -> None:
-    # If Core.Camera is empty, pick the first loaded camera device.
     cam = core.getCameraDevice()
     if cam:
         return
@@ -95,13 +80,11 @@ def _mm_channel_group_and_presets(core, site_cfg: dict) -> tuple[str, list[str]]
     mm = site_cfg.get("micromanager", {}) if isinstance(site_cfg, dict) else {}
     group = (mm.get("channel_group") or "").strip()
     presets = list(mm.get("default_presets") or [])
-    # If TOML doesn't provide a channel group, try the core's current ChannelGroup
     if not group:
         try:
             group = (core.getChannelGroup() or "").strip()
         except Exception:
             group = ""
-    # Validate group exists
     if group:
         try:
             groups = list(core.getAvailableConfigGroups())
@@ -112,10 +95,6 @@ def _mm_channel_group_and_presets(core, site_cfg: dict) -> tuple[str, list[str]]
             presets = []
     return group, presets
 
-
-# ----------------------------
-# Main app
-# ----------------------------
 
 class JogSnapWidget(QWidget):
     def __init__(self, fp: "FishPicker"):
@@ -128,7 +107,6 @@ class JogSnapWidget(QWidget):
         self.status = QLabel("")
         root.addWidget(self.status)
 
-        # Step controls
         steps_box = QGroupBox("Step sizes (mm)")
         steps_layout = QHBoxLayout()
         steps_box.setLayout(steps_layout)
@@ -152,7 +130,6 @@ class JogSnapWidget(QWidget):
 
         root.addWidget(steps_box)
 
-        # Jog buttons
         jog_box = QGroupBox("Jog (Zaber)")
         jog_layout = QVBoxLayout()
         jog_box.setLayout(jog_layout)
@@ -181,7 +158,6 @@ class JogSnapWidget(QWidget):
 
         root.addWidget(jog_box)
 
-        # Snap button
         snap_box = QGroupBox("Camera")
         snap_layout = QHBoxLayout()
         snap_box.setLayout(snap_layout)
@@ -190,7 +166,6 @@ class JogSnapWidget(QWidget):
         snap_layout.addWidget(self.btn_snap)
         root.addWidget(snap_box)
 
-        # Wiring
         self.btn_xm.clicked.connect(lambda: self._jog("x", -self.step_xy.value()))
         self.btn_xp.clicked.connect(lambda: self._jog("x", +self.step_xy.value()))
         self.btn_ym.clicked.connect(lambda: self._jog("y", -self.step_xy.value()))
@@ -232,37 +207,32 @@ class JogSnapWidget(QWidget):
 
 
 class FishPicker:
-    def _apply_right_dock_width(self, frac: float = 0.40) -> None:
+    def _right_dock_names(self) -> list[str]:
+        return [
+            "Workflow",
+            "Picking",
+            "Setup",
+            "MDA",
+            "MM Presets",
+            "MM Properties",
+            "Pick Selection",
+        ]
+
+    def _apply_right_dock_width(self, frac: float = 0.30) -> None:
         try:
             qtwin = self.v.window._qt_window
-
-            names = [
-                "Workflow",
-                "MM Presets",
-                "MM Properties",
-                "MDA",
-                "Setup",
-                "Picking",
-                "Pick Selection",
-            ]
-            docks = [self.v.window._dock_widgets.get(n) for n in names]
-            docks = [d for d in docks if d is not None]
-            if not docks:
+            base = self.v.window._dock_widgets.get("Workflow") or self.v.window._dock_widgets.get("Picking") or self.v.window._dock_widgets.get("MDA")
+            if base is None:
                 return
-
             target = int(qtwin.size().width() * float(frac))
-
-            for d in docks:
-                try:
-                    d.setMaximumWidth(target)
-                except Exception:
-                    pass
-
             try:
-                qtwin.resizeDocks(docks, [target] * len(docks), Qt.Horizontal)
+                base.setMaximumWidth(target)
             except Exception:
                 pass
-
+            try:
+                qtwin.resizeDocks([base], [target], Qt.Horizontal)
+            except Exception:
+                pass
             try:
                 QApplication.processEvents()
                 qtwin.updateGeometry()
@@ -271,6 +241,29 @@ class FishPicker:
         except Exception:
             pass
 
+    def _hide_right_docks(self, keep: str | None = None) -> None:
+        for name in self._right_dock_names():
+            dw = self.v.window._dock_widgets.get(name)
+            if dw is None:
+                continue
+            if keep and name == keep:
+                continue
+            try:
+                dw.hide()
+            except Exception:
+                pass
+
+    def show_right_panel(self, name: str) -> None:
+        self._hide_right_docks(keep=name)
+        dw = self.v.window._dock_widgets.get(name)
+        if dw is not None:
+            try:
+                dw.show()
+                dw.raise_()
+            except Exception:
+                pass
+        QTimer.singleShot(50, lambda: self._apply_right_dock_width(0.30))
+
     def __init__(self, sim: bool = False):
         _apply_log_filters()
 
@@ -278,7 +271,6 @@ class FishPicker:
         self.expt_parent_dir = Path("D:/fishpicker_expts/")
         self.cfg_dir = _repo_root() / "fish_sorter" / "configs"
 
-        # Napari viewer + micromanager widget
         self.v = napari.Viewer()
         self.dw, self.main_window = self.v.window.add_plugin_dock_widget("napari-micromanager")
         qtwindow = self.v.window._qt_window
@@ -293,7 +285,6 @@ class FishPicker:
         if sim:
             if FakeDemoCamera is not None:
                 _ = FakeDemoCamera(timing=2)
-                # best-effort: only valid if Channel group exists in sim env
                 try:
                     self.core.setConfig("Channel", "Cy5")
                 except Exception:
@@ -319,7 +310,6 @@ class FishPicker:
                 from pymmcore_widgets.device_properties import PropertyBrowser
                 from qtpy.QtWidgets import QTabWidget
 
-                # Tabbed presets: one tab per Micro-Manager config group
                 self.mm_presets_tabs = QTabWidget()
                 try:
                     groups = list(self.core.getAvailableConfigGroups())
@@ -335,14 +325,12 @@ class FishPicker:
 
                 self.v.window.add_dock_widget(self.mm_presets_tabs, name="MM Presets", area="right", tabify=True)
 
-                # Raw device properties (continuous controls like Voltage)
                 self.mm_props = PropertyBrowser(mmcore=self.core)
                 self.v.window.add_dock_widget(self.mm_props, name="MM Properties", area="right", tabify=True)
 
             except Exception as e:
                 logging.warning(f"MM Presets/Properties dock not available: {e!r}")
 
-            # Apply a default exposure if provided and if we can
             try:
                 exp = mm.get("default_exposure_ms", None)
                 if exp is not None:
@@ -350,8 +338,6 @@ class FishPicker:
             except Exception:
                 pass
 
-        # Try to make the napari-micromanager UI use the same core instance.
-        # (Best-effort; different plugin versions store references differently.)
         try:
             self.main_window._mmc = self.core
             if hasattr(self.main_window, "_core_link") and hasattr(self.main_window._core_link, "_mmc"):
@@ -364,77 +350,30 @@ class FishPicker:
 
         self.image_init()
         self.assign_widgets()
-        QTimer.singleShot(350, lambda: self._apply_right_dock_width(0.40))
-        try:
-            self.v.window._show_dock_widget("Workflow")
-        except Exception:
-            try:
-                dw = self.v.window._dock_widgets.get("Workflow")
-                if dw is not None:
-                    dw.show()
-            except Exception:
-                pass
+
+        QTimer.singleShot(200, lambda: self.show_right_panel("Workflow"))
 
         napari.run()
 
     def assign_widgets(self):
-        # Setup
         self.setup = SetupWidget(self.cfg_dir)
         self.v.window.add_dock_widget(self.setup, name="Setup", area="right", tabify=True)
         self.setup.pick_setup.clicked.connect(self.setup_picker)
 
-        # Picking
         self.pick = Pick(self.phc)
         self.pick_gui = PickGUI(self.pick)
         self.pick_gui.new_expt.new_exp_req.connect(self._new_exp)
         self.pick_gui.calib_pick.save_pick_h.connect(self._save_pick_h)
         self.v.window.add_dock_widget(self.pick_gui, name="Picking", area="right", tabify=True)
 
-        # Workflow dock (top-level)
         try:
-            # give PickGUI a backref so WorkflowPanel can navigate
             self.pick_gui.fishpicker = self
-
             self.workflow = WorkflowPanel(self.pick_gui)
             self.v.window.add_dock_widget(self.workflow, name="Workflow", area="right", tabify=True)
-
-            # Make Workflow the first/right-dock tab by tabifying others onto it.
-            self._tabify_right_docks_prefer_workflow()
         except Exception as e:
             logging.warning(f"Workflow dock failed: {e!r}")
 
-    def _tabify_right_docks_prefer_workflow(self) -> None:
-        try:
-            qtwin = self.v.window._qt_window
-            base = self.v.window._dock_widgets.get("Workflow")
-            if base is None:
-                return
-
-            # Order matters: tabify these onto Workflow, then raise Workflow.
-            names = [
-                "MM Presets",
-                "MM Properties",
-                "MDA",
-                "Setup",
-                "Picking",
-                "Pick Selection",
-            ]
-            for name in names:
-                dw = self.v.window._dock_widgets.get(name)
-                if dw is None or dw is base:
-                    continue
-                try:
-                    qtwin.tabifyDockWidget(base, dw)
-                except Exception:
-                    pass
-
-            try:
-                base.show()
-                base.raise_()
-            except Exception:
-                pass
-        except Exception:
-            pass
+        self._hide_right_docks(keep="Workflow")
 
     def image_init(self):
         self.mosaic = Mosaic(self.v)
@@ -465,7 +404,6 @@ class FishPicker:
             self.img_tools._create_crosshairs()
 
     def setup_MDA(self):
-        # Ensure the napari-micromanager MDA UI is visible, then locate its widget robustly.
         self.main_window._show_dock_widget("MDA")
 
         dw = self.v.window._dock_widgets.get("MDA")
@@ -474,7 +412,6 @@ class FishPicker:
                 if isinstance(k, str) and "MDA" in k:
                     dw = v
                     break
-
         if dw is None:
             raise RuntimeError("Could not locate MDA dock widget in napari window (_dock_widgets).")
 
@@ -482,9 +419,6 @@ class FishPicker:
 
         sequence = self.mosaic.init_pos(self.img_tools.fov_w, self.img_tools.fov_h)
 
-        # Channels:
-        # - Prefer explicit config from fish_sorter.local.toml (micromanager.channel_group + default_presets)
-        # - Otherwise, fall back to whatever Micro-Manager reports in the loaded system configuration.
         group, presets = _mm_channel_group_and_presets(self.core, self.site_cfg)
 
         if group and not presets:
@@ -493,13 +427,11 @@ class FishPicker:
             except Exception:
                 presets = []
 
-        # De-dup while preserving order
         seen = set()
         presets = [p for p in presets if not (str(p) in seen or seen.add(str(p)))]
 
         if group and presets:
             exp = float(self.core.getExposure())
-            # In useq.Channel: group = config group name, config = preset name
             sequence = sequence.replace(
                 channels=tuple(Channel(group=group, config=str(p), exposure=exp) for p in presets)
             )
@@ -561,6 +493,8 @@ class FishPicker:
 
             self._mda_finished_connect = True
 
+        self.show_right_panel("Workflow")
+
     def setup_picker(self):
         sequence = self.mda.value()
         self.main_mag()
@@ -607,6 +541,8 @@ class FishPicker:
         )
         self.pick_gui.update_pick_widgets(status=True)
         self._pick_selection_gui()
+
+        self.show_right_panel("Picking")
 
     def setup_iplate(self):
         array = self.cfg_dir / "arrays" / self.img_array
@@ -722,23 +658,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     FishPicker(sim=args.sim)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
