@@ -31,16 +31,16 @@ class ImageWidget(QWidget):
 
         self.mosaic_btn = QPushButton("Stitch mosaic")
         self.class_btn = QPushButton("Classify")
-        self.cross_btn = QPushButton('Crosshairs')
+        self.workflow_btn = QPushButton("Workflow")
        
         self.crosshair_layer = 'crosshairs'
-        self.cross_btn.setToolTip('Toggle crosshairs')
-        self.cross_btn.clicked.connect(self._toggle_crosshairs)
+        self.workflow_btn.setToolTip("Return to Workflow")
+        self.workflow_btn.clicked.connect(self._go_workflow)
 
         layout = QHBoxLayout()
         layout.addWidget(self.mosaic_btn)
         layout.addWidget(self.class_btn)
-        layout.addWidget(self.cross_btn)
+        layout.addWidget(self.workflow_btn)
         self.setLayout(layout)
         
     def _create_crosshairs(self):
@@ -112,6 +112,17 @@ class ImageWidget(QWidget):
         self.fov_h = CAM_Y_PX * self.pixel_size_um
         self.fov_w = CAM_X_PX * self.pixel_size_um
 
+    def _go_workflow(self):
+        try:
+            fp = getattr(self.viewer.window._qt_window, "_fishpicker", None)
+            if fp is None:
+                return
+            fp.show_right_panel("Workflow")
+        except Exception:
+            pass
+
+    def toggle_crosshairs(self):
+        self._toggle_crosshairs()
     def _toggle_crosshairs(self):
         """Toggles the crosshairs on the button press
         """
@@ -121,5 +132,6 @@ class ImageWidget(QWidget):
         else:
             self.get_mag()
             self._create_crosshairs()
+
 
 

@@ -206,7 +206,38 @@ class JogSnapWidget(QWidget):
             self._set_status(f"Snap failed: {e!r}")
 
 
+class CrosshairsPanel(QWidget):
+    def __init__(self, fp: "FishPicker"):
+        super().__init__()
+        self.fp = fp
+
+        root = QVBoxLayout()
+        self.setLayout(root)
+
+        self.status = QLabel("Crosshairs: -")
+        root.addWidget(self.status)
+
+        self.btn = QPushButton("Toggle crosshairs")
+        self.btn.clicked.connect(self._toggle)
+        root.addWidget(self.btn)
+
+        self.refresh()
+
+    def refresh(self):
+        try:
+            on = ("crosshairs" in self.fp.v.layers)
+            self.status.setText("Crosshairs: ON" if on else "Crosshairs: OFF")
+        except Exception:
+            self.status.setText("Crosshairs: -")
+
+    def _toggle(self):
+        try:
+            self.fp.img_tools.toggle_crosshairs()
+        except Exception:
+            pass
+        self.refresh()
 class FishPicker:
+
     def _right_dock_names(self) -> list[str]:
         return [
             "Workflow",
@@ -216,6 +247,7 @@ class FishPicker:
             "MM Presets",
             "MM Properties",
             "Pick Selection",
+            "Crosshairs",
         ]
 
     def _apply_right_dock_width(self, frac: float = 0.30) -> None:
@@ -246,7 +278,7 @@ class FishPicker:
             dw = self.v.window._dock_widgets.get(name)
             if dw is None:
                 continue
-            if keep and name == keep:
+            if keep and (name == keep or (keep == "MDA" and name == "Crosshairs")):
                 continue
             try:
                 dw.hide()
@@ -262,6 +294,19 @@ class FishPicker:
                 dw.raise_()
             except Exception:
                 pass
+
+        if name == "MDA":
+            try:
+                mda_dw = self.v.window._dock_widgets.get("MDA")
+                ch_dw = self.v.window._dock_widgets.get("Crosshairs")
+                if ch_dw is not None:
+                    ch_dw.show()
+                if mda_dw is not None and ch_dw is not None:
+                    qtwin = self.v.window._qt_window
+                    qtwin.tabifyDockWidget(mda_dw, ch_dw)
+            except Exception:
+                pass
+
         QTimer.singleShot(50, lambda: self._apply_right_dock_width(0.30))
 
     def __init__(self, sim: bool = False):
@@ -370,6 +415,17 @@ class FishPicker:
             self.pick_gui.fishpicker = self
             self.workflow = WorkflowPanel(self.pick_gui)
             self.v.window.add_dock_widget(self.workflow, name="Workflow", area="right", tabify=True)
+
+            self.crosshairs = CrosshairsPanel(self)
+            self.v.window.add_dock_widget(self.crosshairs, name="Crosshairs", area="right", tabify=True)
+            try:
+                qtwin = self.v.window._qt_window
+                mda_dw = self.v.window._dock_widgets.get("MDA")
+                ch_dw  = self.v.window._dock_widgets.get("Crosshairs")
+                if mda_dw is not None and ch_dw is not None:
+                    qtwin.tabifyDockWidget(mda_dw, ch_dw)
+            except Exception:
+                pass
         except Exception as e:
             logging.warning(f"Workflow dock failed: {e!r}")
 
@@ -658,3 +714,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     FishPicker(sim=args.sim)
+
+
+
