@@ -9,14 +9,16 @@ class WorkflowPanel(QWidget):
     """
     Wizard Mode checklist with Go-to buttons.
 
-    IMPORTANT:
-    - Go-to buttons must land on the correct superfunction tab inside PickGUI.
-    - Do not dump users into a generic panel and force hunting.
+    Key design:
+    - This panel must NOT assume napari docks.
+    - Navigation is via an injected router (Qt shell), with a backwards-compatible fallback
+      to the legacy napari-as-shell fishpicker object if present.
     """
 
-    def __init__(self, picking, parent: QWidget | None = None):
+    def __init__(self, picking, router=None, parent: QWidget | None = None):
         super().__init__(parent=parent)
         self.picking = picking
+        self.router = router
         self._create_gui()
         self.refresh()
 
@@ -61,7 +63,15 @@ class WorkflowPanel(QWidget):
     def _disp_ok(self) -> bool:
         return bool(getattr(self.picking, "disp_calib", False))
 
-    def _dock_exists(self, name: str) -> bool:
+    def _panel_exists(self, name: str) -> bool:
+        # Preferred: Qt shell router
+        if self.router is not None and hasattr(self.router, "has_panel"):
+            try:
+                return bool(self.router.has_panel(name))
+            except Exception:
+                pass
+
+        # Legacy fallback: napari docks
         fp = getattr(self.picking, "fishpicker", None)
         if fp is None:
             return False
@@ -106,20 +116,15 @@ class WorkflowPanel(QWidget):
         layout.addWidget(self.btn_step4, 6, 0, 1, 1)
         layout.addWidget(self.lbl_step4, 6, 1, 1, 1)
 
-        self.btn_mm_presets = QPushButton("Open MM Presets (config groups)")
-        self.lbl_mm_presets = QLabel("-")
-        self.btn_mm_presets.clicked.connect(lambda: self.go_to_dock("MM Presets"))
-        layout.addWidget(self.btn_mm_presets, 7, 0, 1, 1)
-        layout.addWidget(self.lbl_mm_presets, 7, 1, 1, 1)
-
-        self.btn_mm_props = QPushButton("Open MM Properties (device properties)")
-        self.lbl_mm_props = QLabel("-")
-        self.btn_mm_props.clicked.connect(lambda: self.go_to_dock("MM Properties"))
-        layout.addWidget(self.btn_mm_props, 8, 0, 1, 1)
-        layout.addWidget(self.lbl_mm_props, 8, 1, 1, 1)
+        # Micro-Manager panel (Qt shell)
+        self.btn_mm = QPushButton("Micro-Manager")
+        self.lbl_mm = QLabel("-")
+        self.btn_mm.clicked.connect(lambda: self.go_to_panel("Micro-Manager"))
+        layout.addWidget(self.btn_mm, 7, 0, 1, 1)
+        layout.addWidget(self.lbl_mm, 7, 1, 1, 1)
 
         self.lbl_hint = QLabel("Tip: Use Go-to buttons, do the step, then click Update checklist.")
-        layout.addWidget(self.lbl_hint, 9, 0, 1, 2)
+        layout.addWidget(self.lbl_hint, 8, 0, 1, 2)
 
     def refresh(self):
         d = self._read_cfg() or {}
@@ -139,10 +144,33 @@ class WorkflowPanel(QWidget):
         self.lbl_step3.setText("OK" if step3_ok else "MISSING")
         self.lbl_step4.setText("OK" if step4_ok else "MISSING")
 
-        self.lbl_mm_presets.setText("OK" if self._dock_exists("MM Presets") else "MISSING")
-        self.lbl_mm_props.setText("OK" if self._dock_exists("MM Properties") else "MISSING")
+        self.lbl_mm.setText("OK" if self._panel_exists("Micro-Manager") else "MISSING")
+
+    def go_to_panel(self, name: str):
+        # Preferred: Qt shell router
+        if self.router is not None and hasattr(self.router, "go_to_panel"):
+            try:
+                self.router.go_to_panel(name)
+                return
+            except Exception:
+                pass
+
+        # Legacy fallback
+        fp = getattr(self.picking, "fishpicker", None)
+        if fp is None:
+            return
+        fp.show_right_panel(name)
 
     def go_to_step(self, step: int):
+        # Preferred: Qt shell router
+        if self.router is not None and hasattr(self.router, "go_to_step"):
+            try:
+                self.router.go_to_step(step)
+                return
+            except Exception:
+                pass
+
+        # Legacy fallback (napari-as-shell)
         fp = getattr(self.picking, "fishpicker", None)
         if fp is None:
             return
@@ -155,7 +183,6 @@ class WorkflowPanel(QWidget):
                 return
 
             if step == 1:
-                # Dispense Plate / Collection Plate tab, then Dispense Plate subtab
                 try:
                     pg.focus_tab(getattr(pg, "TAB_PLATE", 0))
                     pg.focus_stage_subtab("Dispense Plate")
@@ -164,7 +191,6 @@ class WorkflowPanel(QWidget):
                 return
 
             if step in (2, 3):
-                # Pipette tab
                 try:
                     pg.focus_tab(getattr(pg, "TAB_PIPETTE", 1))
                 except Exception:
@@ -174,10 +200,4 @@ class WorkflowPanel(QWidget):
         if step == 4:
             fp.show_right_panel("MDA")
             return
-
-    def go_to_dock(self, name: str):
-        fp = getattr(self.picking, "fishpicker", None)
-        if fp is None:
-            return
-        fp.show_right_panel(name)
 
