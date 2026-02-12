@@ -7,10 +7,11 @@ from qtpy.QtWidgets import QGridLayout, QLabel, QPushButton, QWidget
 
 class WorkflowPanel(QWidget):
     """
-    Level 3 - Full Wizard Mode (2-col checklist)
+    Wizard Mode checklist with Go-to buttons.
 
-    Col 1: Go-to buttons for steps/tools
-    Col 2: Status (OK / MISSING / -)
+    IMPORTANT:
+    - Go-to buttons must land on the correct superfunction tab inside PickGUI.
+    - Do not dump users into a generic panel and force hunting.
     """
 
     def __init__(self, picking, parent: QWidget | None = None):
@@ -81,25 +82,25 @@ class WorkflowPanel(QWidget):
         layout.addWidget(QLabel("Step / Tool"), 2, 0, 1, 1)
         layout.addWidget(QLabel("Status"), 2, 1, 1, 1)
 
-        self.btn_step1 = QPushButton("Go to Step 1 - Set dispense plate TL/BR")
+        self.btn_step1 = QPushButton("Step 1 - Dispense plate corners (TL/BR)")
         self.lbl_step1 = QLabel("-")
         self.btn_step1.clicked.connect(lambda: self.go_to_step(1))
         layout.addWidget(self.btn_step1, 3, 0, 1, 1)
         layout.addWidget(self.lbl_step1, 3, 1, 1, 1)
 
-        self.btn_step2 = QPushButton("Go to Step 2 - Set pick height")
+        self.btn_step2 = QPushButton("Step 2 - Pipette pick height")
         self.lbl_step2 = QLabel("-")
         self.btn_step2.clicked.connect(lambda: self.go_to_step(2))
         layout.addWidget(self.btn_step2, 4, 0, 1, 1)
         layout.addWidget(self.lbl_step2, 4, 1, 1, 1)
 
-        self.btn_step3 = QPushButton("Go to Step 3 - Set dispense height")
+        self.btn_step3 = QPushButton("Step 3 - Pipette dispense height")
         self.lbl_step3 = QLabel("-")
         self.btn_step3.clicked.connect(lambda: self.go_to_step(3))
         layout.addWidget(self.btn_step3, 5, 0, 1, 1)
         layout.addWidget(self.lbl_step3, 5, 1, 1, 1)
 
-        self.btn_step4 = QPushButton("Go to Step 4 - Define grid/channels in MDA")
+        self.btn_step4 = QPushButton("Step 4 - Define grid/channels in MDA")
         self.lbl_step4 = QLabel("-")
         self.btn_step4.clicked.connect(lambda: self.go_to_step(4))
         layout.addWidget(self.btn_step4, 6, 0, 1, 1)
@@ -149,17 +150,26 @@ class WorkflowPanel(QWidget):
         if step in (1, 2, 3):
             fp.show_right_panel("Picking")
 
+            pg = getattr(fp, "pick_gui", None)
+            if pg is None:
+                return
+
             if step == 1:
+                # Dispense Plate / Collection Plate tab, then Dispense Plate subtab
                 try:
-                    tabs = getattr(fp.pick_gui, "stage_tabs", None)
-                    if tabs is not None:
-                        for i in range(tabs.count()):
-                            if tabs.tabText(i) == "Dispense Plate":
-                                tabs.setCurrentIndex(i)
-                                break
+                    pg.focus_tab(getattr(pg, "TAB_PLATE", 0))
+                    pg.focus_stage_subtab("Dispense Plate")
                 except Exception:
                     pass
-            return
+                return
+
+            if step in (2, 3):
+                # Pipette tab
+                try:
+                    pg.focus_tab(getattr(pg, "TAB_PIPETTE", 1))
+                except Exception:
+                    pass
+                return
 
         if step == 4:
             fp.show_right_panel("MDA")
@@ -170,3 +180,4 @@ class WorkflowPanel(QWidget):
         if fp is None:
             return
         fp.show_right_panel(name)
+

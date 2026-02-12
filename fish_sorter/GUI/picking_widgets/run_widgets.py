@@ -77,6 +77,7 @@ class PickerThread(QThread):
 
 class PickWidget(QPushButton):
     """A push button widget to start full picking."""
+    state_changed = pyqtSignal(str)
 
     def __init__(self, picking, parent: QWidget | None=None):
         super().__init__(parent=parent)
@@ -106,16 +107,31 @@ class PickWidget(QPushButton):
             self.fp_thread = PickerThread(self.picking)
             self.fp_thread.status_update.connect(self._update_status)
             self.fp_thread.picking_done.connect(self._picking_finished)
+
+            self.paused = False
+            self.pause_button.setText("Pause Picking")
+            self.pause_button.setEnabled(True)
+            self.stop_button.setEnabled(True)
+
+            self.state_changed.emit("PICKING")
             self.fp_thread.start()
         else:
             logging.info("Pipette not calibrated")
+            self.state_changed.emit("CALIBRATION")
             QMessageBox.information(self, "Calibration Needed", "Please set pick + dispense positions before picking")
 
     def _update_status(self, msg):
         logging.info(f"{msg}")
+        if isinstance(msg, str) and msg.startswith("Exception "):
+            self.state_changed.emit("ERROR")
 
     def _picking_finished(self):
         logging.info("Picker thread finished")
+        self.pause_button.setEnabled(False)
+        self.stop_button.setEnabled(False)
+        self.pause_button.setText("Pause Picking")
+        self.paused = False
+        self.state_changed.emit("READY")
         QMessageBox.information(self, "Complete", "Picking Finished!")
 
     def _pause_picking(self):
@@ -125,16 +141,19 @@ class PickWidget(QPushButton):
                 self.pause_button.setText("Resume Picking")
                 self.paused = True
                 logging.info("Paused picking")
+                self.state_changed.emit("PAUSED")
             else:
                 self.fp_thread.resume()
                 self.pause_button.setText("Pause Picking")
                 self.paused = False
                 logging.info("Resumed Picking")
+                self.state_changed.emit("PICKING")
 
     def _stop_picking(self):
         if self.fp_thread and self.fp_thread.isRunning():
             self.fp_thread.stop()
             logging.info("Stop picking requested")
+            self.state_changed.emit("STOPPING")
 
 
 class NewExptWidget(QPushButton):
