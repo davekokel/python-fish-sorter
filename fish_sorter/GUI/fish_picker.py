@@ -325,7 +325,15 @@ class FishPicker:
 
         self.image_init()
         self.assign_widgets()
-        self.v.window._qt_viewer._dock_widgets["Workflow"].show()
+        try:
+            self.v.window._show_dock_widget("Workflow")
+        except Exception:
+            try:
+                dw = self.v.window._dock_widgets.get("Workflow")
+                if dw is not None:
+                    dw.show()
+            except Exception:
+                pass
 
         napari.run()
 
@@ -384,7 +392,15 @@ class FishPicker:
             self.img_tools._create_crosshairs()
 
     def setup_MDA(self):
-        self.v.window._qt_viewer._dock_widgets["Workflow"].show()
+        try:
+            self.v.window._show_dock_widget("Workflow")
+        except Exception:
+            try:
+                dw = self.v.window._dock_widgets.get("Workflow")
+                if dw is not None:
+                    dw.show()
+            except Exception:
+                pass
         self.mda = self.v.window._dock_widgets.get("MDA").widget()
 
         sequence = self.mosaic.init_pos(self.img_tools.fov_w, self.img_tools.fov_h)
@@ -629,6 +645,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     FishPicker(sim=args.sim)
+
 
 
 

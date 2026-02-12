@@ -137,7 +137,9 @@ class WorkflowPanel(QWidget):
             try:
                 fp = getattr(self.picking, "fishpicker", None)
                 if fp is not None:
-                    fp.v.window._qt_viewer._dock_widgets["Picking"].show()
+                    dw = fp.v.window._dock_widgets.get("Picking")
+                if dw is not None:
+                    dw.show()
             except Exception:
                 pass
             return
@@ -147,7 +149,9 @@ class WorkflowPanel(QWidget):
             try:
                 fp = getattr(self.picking, "fishpicker", None)
                 if fp is not None:
-                    fp.v.window._qt_viewer._dock_widgets["Picking"].show()
+                    dw = fp.v.window._dock_widgets.get("Picking")
+                if dw is not None:
+                    dw.show()
                 # PickGUI keeps stage_tabs; if present switch to Dispense Plate
                 tabs = getattr(self.picking, "stage_tabs", None)
                 if tabs is not None:
@@ -164,7 +168,9 @@ class WorkflowPanel(QWidget):
             try:
                 fp = getattr(self.picking, "fishpicker", None)
                 if fp is not None:
-                    fp.v.window._qt_viewer._dock_widgets["Picking"].show()
+                    dw = fp.v.window._dock_widgets.get("Picking")
+                if dw is not None:
+                    dw.show()
             except Exception:
                 pass
             return
@@ -176,3 +182,4 @@ class WorkflowPanel(QWidget):
                 fp.main_window._show_dock_widget("MDA")
         except Exception:
             pass
+
