@@ -12,7 +12,7 @@ import napari
 import numpy as np
 from napari.utils.colormaps import Colormap
 from qtpy.QtCore import Qt, QTimer
-from qtpy.QtWidgets import QWidget, QVBoxLayout, QLabel, QGroupBox, QHBoxLayout, QPushButton, QDoubleSpinBox
+from qtpy.QtWidgets import QWidget, QVBoxLayout, QLabel, QGroupBox, QHBoxLayout, QPushButton, QDoubleSpinBox, QApplication
 
 from tifffile import imwrite
 from useq import MDASequence, Channel
@@ -232,6 +232,45 @@ class JogSnapWidget(QWidget):
 
 
 class FishPicker:
+    def _apply_right_dock_width(self, frac: float = 0.40) -> None:
+        try:
+            qtwin = self.v.window._qt_window
+
+            names = [
+                "Workflow",
+                "MM Presets",
+                "MM Properties",
+                "MDA",
+                "Setup",
+                "Picking",
+                "Pick Selection",
+            ]
+            docks = [self.v.window._dock_widgets.get(n) for n in names]
+            docks = [d for d in docks if d is not None]
+            if not docks:
+                return
+
+            target = int(qtwin.size().width() * float(frac))
+
+            for d in docks:
+                try:
+                    d.setMaximumWidth(target)
+                except Exception:
+                    pass
+
+            try:
+                qtwin.resizeDocks(docks, [target] * len(docks), Qt.Horizontal)
+            except Exception:
+                pass
+
+            try:
+                QApplication.processEvents()
+                qtwin.updateGeometry()
+            except Exception:
+                pass
+        except Exception:
+            pass
+
     def __init__(self, sim: bool = False):
         _apply_log_filters()
 
@@ -325,6 +364,7 @@ class FishPicker:
 
         self.image_init()
         self.assign_widgets()
+        QTimer.singleShot(350, lambda: self._apply_right_dock_width(0.40))
         try:
             self.v.window._show_dock_widget("Workflow")
         except Exception:
@@ -354,14 +394,47 @@ class FishPicker:
         try:
             # give PickGUI a backref so WorkflowPanel can navigate
             self.pick_gui.fishpicker = self
-            # also expose the sub-tab widget for "Dispense Plate" navigation
-            if hasattr(self.pick_gui, "stage_tabs"):
-                self.pick_gui.stage_tabs = self.pick_gui.stage_tabs
 
             self.workflow = WorkflowPanel(self.pick_gui)
             self.v.window.add_dock_widget(self.workflow, name="Workflow", area="right", tabify=True)
+
+            # Make Workflow the first/right-dock tab by tabifying others onto it.
+            self._tabify_right_docks_prefer_workflow()
         except Exception as e:
             logging.warning(f"Workflow dock failed: {e!r}")
+
+    def _tabify_right_docks_prefer_workflow(self) -> None:
+        try:
+            qtwin = self.v.window._qt_window
+            base = self.v.window._dock_widgets.get("Workflow")
+            if base is None:
+                return
+
+            # Order matters: tabify these onto Workflow, then raise Workflow.
+            names = [
+                "MM Presets",
+                "MM Properties",
+                "MDA",
+                "Setup",
+                "Picking",
+                "Pick Selection",
+            ]
+            for name in names:
+                dw = self.v.window._dock_widgets.get(name)
+                if dw is None or dw is base:
+                    continue
+                try:
+                    qtwin.tabifyDockWidget(base, dw)
+                except Exception:
+                    pass
+
+            try:
+                base.show()
+                base.raise_()
+            except Exception:
+                pass
+        except Exception:
+            pass
 
     def image_init(self):
         self.mosaic = Mosaic(self.v)
@@ -392,16 +465,20 @@ class FishPicker:
             self.img_tools._create_crosshairs()
 
     def setup_MDA(self):
-        try:
-            self.v.window._show_dock_widget("Workflow")
-        except Exception:
-            try:
-                dw = self.v.window._dock_widgets.get("Workflow")
-                if dw is not None:
-                    dw.show()
-            except Exception:
-                pass
-        self.mda = self.v.window._dock_widgets.get("MDA").widget()
+        # Ensure the napari-micromanager MDA UI is visible, then locate its widget robustly.
+        self.main_window._show_dock_widget("MDA")
+
+        dw = self.v.window._dock_widgets.get("MDA")
+        if dw is None:
+            for k, v in self.v.window._dock_widgets.items():
+                if isinstance(k, str) and "MDA" in k:
+                    dw = v
+                    break
+
+        if dw is None:
+            raise RuntimeError("Could not locate MDA dock widget in napari window (_dock_widgets).")
+
+        self.mda = dw.widget()
 
         sequence = self.mosaic.init_pos(self.img_tools.fov_w, self.img_tools.fov_h)
 
@@ -645,6 +722,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     FishPicker(sim=args.sim)
+
+
+
+
+
+
 
 
 

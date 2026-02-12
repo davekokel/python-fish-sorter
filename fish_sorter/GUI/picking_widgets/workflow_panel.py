@@ -115,19 +115,29 @@ class WorkflowPanel(QWidget):
         for key, lbl in self.rows:
             lbl.setText("OK" if st.get(key) else "MISSING")
 
-        # compute next step
+        # compute next step + set a navigation label that tells the operator what to do
         if not st["zabers"]:
             nxt = "Connect Zabers"
+            go = "Go to Picking tab"
         elif not st["plate"]:
             nxt = "Set dispense plate TL/BR (Dispense Plate tab)"
+            go = "Go to Dispense Plate tab"
         elif not st["pick"]:
             nxt = "Set pick position"
+            go = "Go to Picking tab"
         elif not st["disp"]:
             nxt = "Set dispense position"
+            go = "Go to Picking tab"
         else:
             nxt = "Ready (define grid/channels in MDA, then Run)"
+            go = "Go to MDA tab"
 
         self.lbl_next.setText(f"Next: {nxt}")
+        try:
+            self.btn_go.setText(go)
+        except Exception:
+            pass
+
     def go_to_next_step(self):
         """Navigate operator to the UI area needed for the current Next step."""
         st = self._status_map()
@@ -182,4 +192,5 @@ class WorkflowPanel(QWidget):
                 fp.main_window._show_dock_widget("MDA")
         except Exception:
             pass
+
 
