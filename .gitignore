@@ -23,3 +23,4 @@ fish_sorter/GUI/__pycache__/
 fish_sorter/hardware/__pycache__/
 __pycache__/
 *.pyc
+_scratch_imaging_stage_refactor/
