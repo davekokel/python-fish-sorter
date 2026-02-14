@@ -38,13 +38,18 @@ class ZaberController():
         self.port_devices = {}
 
         self._connect()
-
     def _connect(self):
         try:
-            if self.env == 'prod':
+            if self.env != 'dev':
                 logging.info('Establishing connection with Zaber devices')
 
-                ports = self.config.get('ports') or [self.config.get('port')]
+                # Support both:
+                #   self.config["ports"]/["port"] (flat)
+                #   self.config["zaber_config"]["ports"]/["port"] (nested)
+                zcfg = self.config.get("zaber_config") if isinstance(self.config, dict) else None
+                zcfg = zcfg if isinstance(zcfg, dict) else {}
+
+                ports = (self.config.get('ports') or zcfg.get('ports')) or [self.config.get('port') or zcfg.get('port')]
                 ports = [p for p in ports if p]
 
                 self.connections = []
@@ -78,33 +83,37 @@ class ZaberController():
             except Exception:
                 pass
         logging.info('Closed Zaber device connection(s)')
-
     def _set_axis(self):
-        port_to_axis = {'COM3': 'x', 'COM4': 'y', 'COM5': 'p'}
+        # Config-driven mapping. Supports both:
+        #   config["port_to_axis"] (preferred)
+        #   config["zaber_config"]["port_to_axis"] (legacy nested schema)
+        zcfg = self.config.get("zaber_config") if isinstance(self.config, dict) else None
+        zcfg = zcfg if isinstance(zcfg, dict) else {}
+        port_to_axis = (self.config.get("port_to_axis") or zcfg.get("port_to_axis")) or {"COM3": "x", "COM4": "y", "COM5": "p"}
 
         self.stage_alias = {}
 
-        for port, devs in getattr(self, 'port_devices', {}).items():
-            axis_name = port_to_axis.get(port)
+        for port, devs in getattr(self, "port_devices", {}).items():
+            axis_name = port_to_axis.get(str(port))
             if axis_name is None:
-                logging.warning(f'No axis mapping for port {port}; skipping')
+                logging.warning(f"No axis mapping for port {port}; skipping")
                 continue
             if not devs:
-                logging.warning(f'No devices found on {port}')
+                logging.warning(f"No devices found on {port}")
                 continue
 
             dev = devs[0]
             axis_obj = dev.get_axis(1)
-            self.stage_alias[axis_obj] = axis_name
+            self.stage_alias[axis_obj] = str(axis_name)
 
             try:
                 sn = dev.serial_number
             except Exception:
                 sn = None
 
-            logging.info(f'Assigned {dev.name} (SN {sn}) on {port} axis 1 -> {axis_name}')
+            logging.info(f"Assigned {dev.name} (SN {sn}) on {port} axis 1 -> {axis_name}")
 
-        logging.info('Done setting axis')
+        logging.info("Done setting axis")
 
     def home_arm(self, arm: Optional[list] = None):
         home = ['p', 'x', 'y'] if arm is None else arm
@@ -153,3 +162,10 @@ class ZaberController():
         except ConnectionFailedException:
             logging.critical('Zaber Connection Failed')
             raise
+
+
+
+
+
+
+

@@ -16,3 +16,10 @@ logs/
 fish_sorter/GUI/fish_picker.py.bak
 
 fish_sorter/configs/micromanager/flash4.cfg
+.venv_qt/
+qt_presets/
+fish_sorter/GUI/widgets/__pycache__/
+fish_sorter/GUI/__pycache__/
+fish_sorter/hardware/__pycache__/
+__pycache__/
+*.pyc

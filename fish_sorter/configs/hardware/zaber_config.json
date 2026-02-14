@@ -1,6 +1,10 @@
 {
   "zaber_config": {
-    "ports": ["COM3", "COM4", "COM5"],
+    "ports": [
+      "COM3",
+      "COM4",
+      "COM5"
+    ],
     "home": {
       "x": 0,
       "y": 0,
@@ -18,6 +22,11 @@
       "y": 1800000,
       "p": 32000,
       "description": "The speed of the stages for all general movements in command data units"
+    },
+    "port_to_axis": {
+      "COM3": "x",
+      "COM4": "y",
+      "COM5": "p"
     }
   }
 }

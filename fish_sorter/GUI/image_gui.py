@@ -1,14 +1,14 @@
 import logging
 import numpy as np
 import re
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Callable
 
 from pymmcore_plus import CMMCorePlus
 from qtpy.QtCore import QSize, Qt
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import (
-    QGridLayout, 
-    QPushButton, 
+    QGridLayout,
+    QPushButton,
     QSizePolicy,
     QHBoxLayout,
     QWidget
@@ -19,20 +19,22 @@ from fish_sorter.constants import CAM_PX_UM, CAM_X_PX, CAM_Y_PX
 
 class ImageWidget(QWidget):
 
-    def __init__(self, viewer, parent: QWidget | None=None):
+    def __init__(self, viewer, on_workflow: Optional[Callable[[], None]] = None, parent: QWidget | None=None):
         """
         :param viewer: napari viewer to use
         :type viewer: napari.Viewer
+        :param on_workflow: callback to return to Workflow panel (Qt shell). If None, legacy fallback is attempted.
         """
 
         super().__init__(parent=parent)
         self.mmc = CMMCorePlus().instance()
         self.viewer = viewer
+        self.on_workflow = on_workflow
 
         self.mosaic_btn = QPushButton("Stitch mosaic")
         self.class_btn = QPushButton("Classify")
         self.workflow_btn = QPushButton("Workflow")
-       
+
         self.crosshair_layer = 'crosshairs'
         self.workflow_btn.setToolTip("Return to Workflow")
         self.workflow_btn.clicked.connect(self._go_workflow)
@@ -42,11 +44,8 @@ class ImageWidget(QWidget):
         layout.addWidget(self.class_btn)
         layout.addWidget(self.workflow_btn)
         self.setLayout(layout)
-        
+
     def _create_crosshairs(self):
-        """Adds image center crosshairs to the napari viewer
-        """
-        
         self.viewer.reset_view()
         preview_layer = None
         for layer in self.viewer.layers:
@@ -56,7 +55,7 @@ class ImageWidget(QWidget):
 
         if preview_layer is None:
             return
-        # Draw in preview pixel coordinates (napari uses row/col == y/x).
+
         try:
             h, w = preview_layer.data.shape[-2], preview_layer.data.shape[-1]
         except Exception:
@@ -66,8 +65,8 @@ class ImageWidget(QWidget):
         xmid = float(w) / 2.0
 
         lines = [
-            [[ymid, 0.0], [ymid, float(w)]],      # horizontal line across image
-            [[0.0, xmid], [float(h), xmid]],      # vertical line across image
+            [[ymid, 0.0], [ymid, float(w)]],
+            [[0.0, xmid], [float(h), xmid]],
         ]
         if self.crosshair_layer in self.viewer.layers:
             del self.viewer.layers[self.crosshair_layer]
@@ -84,8 +83,6 @@ class ImageWidget(QWidget):
         layer.selectable = False
 
     def get_mag(self):
-        """Helper function to get the current magnification of the microscope"""
-
         logging.info('Getting the magnification')
 
         obj_devs = self.mmc.guessObjectiveDevices()
@@ -113,6 +110,15 @@ class ImageWidget(QWidget):
         self.fov_w = CAM_X_PX * self.pixel_size_um
 
     def _go_workflow(self):
+        # Qt shell path
+        if self.on_workflow is not None:
+            try:
+                self.on_workflow()
+                return
+            except Exception:
+                pass
+
+        # Legacy fallback (napari-as-shell)
         try:
             fp = getattr(self.viewer.window._qt_window, "_fishpicker", None)
             if fp is None:
@@ -123,15 +129,10 @@ class ImageWidget(QWidget):
 
     def toggle_crosshairs(self):
         self._toggle_crosshairs()
-    def _toggle_crosshairs(self):
-        """Toggles the crosshairs on the button press
-        """
 
+    def _toggle_crosshairs(self):
         if self.crosshair_layer in self.viewer.layers:
             del self.viewer.layers[self.crosshair_layer]
         else:
             self.get_mag()
             self._create_crosshairs()
-
-
-
